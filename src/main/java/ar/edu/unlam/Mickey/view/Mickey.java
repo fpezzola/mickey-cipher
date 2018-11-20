@@ -215,6 +215,7 @@ public class Mickey {
 							   lblNingnArchivoSeleccionado.setText("Ning\u00FAn archivo seleccionado");  
 							   lblNewLabel.setText("Previsualizaci\\u00F3n de imagen");
 							   imageFileToEncode = null;
+							   button.setText("Realizar operacion");
 						   }else {
 							   lblStatus.setForeground(new Color(255, 69, 0));
 							   lblStatus.setText("Al parecer no has ingresado bien la clave. Por favor intente nuevamente");
