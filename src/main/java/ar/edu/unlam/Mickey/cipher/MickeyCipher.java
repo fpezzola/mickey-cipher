@@ -8,12 +8,12 @@ public final int REGISTER_LENGTH = 100;
  
 public MickeyContext context;
 public OperationsUtils utils;
-    
-public final int [] rMask = {
-        1,1,0,1,1,1,1,0,0,1,0,0,1,1,0,0,1,0,0,1,1,1,1,0,0,
-        1,0,0,1,0,0,0,0,0,0,0,0,1,1,0,0,1,1,0,0,1,1,0,0,0,
-        1,0,1,0,1,0,1,0,1,0,1,1,0,1,1,1,1,1,0,0,0,1,1,0,0,
-        0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,1,1,0,1,1,1,1,0,0};
+
+public final int [] rTap = {
+        0,0,0,1,0,1,1,0,1,1,0,0,1,1,0,0,1,0,0,1,1,1,1,0,0,
+        1,1,0,1,0,0,0,1,1,0,1,0,1,0,0,0,1,1,0,0,1,1,0,0,0,
+        1,1,1,0,1,0,0,1,1,0,1,1,0,1,1,1,1,1,0,1,0,1,1,0,0,
+        0,1,0,0,0,1,1,1,0,0,0,0,1,1,1,1,1,1,0,1,1,1,1,0,0};
     
 public final int [] comp0 = {
         0,0,0,0,1,1,0,0,0,1,0,1,1,1,1,0,1,0,0,1,0,1,0,1,0,
@@ -39,6 +39,24 @@ public final int [] fb1 = {
         0,0,1,0,0,0,1,0,0,1,0,0,1,0,1,1,0,1,0,1,0,0,1,0,1,
         0,0,0,1,1,1,1,0,1,1,1,1,1,0,0,0,0,0,0,1,0,0,0,0,1};
 
+
+public MickeyCipher(int [] key, int [] initVector) {
+    context = new MickeyContext(key);
+    utils = new OperationsUtils();
+
+    for (int i = 0; i < initVector.length * 8; ++i) {
+        clockKG(true, utils.signedRightShift(initVector[i / 8],(7 - (i % 8))) & 1);
+    }
+    
+    for (int i = 0; i < 80; ++i) {
+        clockKG(true, utils.signedRightShift(key[i / 8],(7 - (i % 8))) & 1);
+    }
+    
+    for (int i = 0; i < 100; ++i) {
+        clockKG(true, 0);
+    }
+}
+
  
 private void clockR(
         int inputBitR,
@@ -48,9 +66,9 @@ private void clockR(
     if (controlBitR == 1) {
         if (feedbackBit == 1) {
             for (int i = 99; i > 0; --i) {
-                context.setR(i,utils.xor(context.getR(i - 1), context.getR(i), rMask[i]));
+                context.setR(i,utils.xor(context.getR(i - 1), context.getR(i), rTap[i]));
             }
-            context.setR(0,utils.xor(rMask[0], context.getR(0)));
+            context.setR(0,utils.xor(rTap[0], context.getR(0)));
         } else {
             for (int i = 99; i > 0; --i) {
             	context.setR(i,utils.xor(context.getR(i - 1), context.getR(i)));
@@ -59,9 +77,9 @@ private void clockR(
     } else {
         if (feedbackBit == 1) {
             for (int i = 99; i > 0; --i) {
-            	context.setR(i,utils.xor(context.getR(i - 1),rMask[i]));
+            	context.setR(i,utils.xor(context.getR(i - 1),rTap[i]));
             }
-            context.setR(0,rMask[0]);
+            context.setR(0,rTap[0]);
         } else {
             for (int i = 99; i > 0; --i) {
             	context.setR(i,context.getR(i - 1));
@@ -75,7 +93,7 @@ private void clockS(
         int inputBitS,
         int controlBitS) {
     int [] sHat = new int [100];
-    int feedbackBit = context.getS(99) ^ inputBitS;
+    int feedbackBit = utils.xor(context.getS(99),inputBitS);
     
     for (int i = 98; i > 0; --i) {
         sHat[i] = utils.xor(context.getS(i - 1),((utils.xor(context.getS(i),comp0[i])) & (utils.xor(context.getS(i + 1),comp1[i]))));
@@ -116,22 +134,7 @@ private int clockKG(boolean mixing, int inputBit) {
     return keystreamBit;
 }
  
-public MickeyCipher(int [] key, int [] iv) {
-    context = new MickeyContext(key);
-    utils = new OperationsUtils();
 
-    for (int i = 0; i < iv.length * 8; ++i) {
-        clockKG(true, (iv[i / 8] >> (7 - (i % 8))) & 1);
-    }
-    
-    for (int i = 0; i < 80; ++i) {
-        clockKG(true, (key[i / 8] >> (7 - (i % 8))) & 1);
-    }
-    
-    for (int i = 0; i < 100; ++i) {
-        clockKG(true, 0);
-    }
-}
  
 public int [] encrypt(int [] bytes) {
     int [] output = new int [bytes.length];
